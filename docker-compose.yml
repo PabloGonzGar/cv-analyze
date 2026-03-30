@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # Aplicación FastAPI
+  api:
+    build: .
+    container_name: cv-ranker-api
+    ports:
+      - "8000:8000"
+    environment:
+      # Apunta al servicio ollama de docker-compose
+      - OLLAMA_HOST=http://ollama:11434
+    depends_on:
+      - ollama
+    volumes:
+      # Persistencia de los uploads y resultados locales
+      - ./backend/uploads:/app/backend/uploads
+      - ./backend/results:/app/backend/results
+
+  # Servicio de Ollama
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-server
+    ports:
+      - "11434:11434"
+    volumes:
+      # Persistencia para no tener que redescargar los modelos (como llama3) cada vez
+      - ollama_data:/root/.ollama
+    # Comando útil para que tras levantar el contenedor descargue 'llama3' si no existe
+    # (El entrypoint oficial arranca el servidor, no suele ser la mejor idea sobrescribirlo todo
+    #  pero se puede hacer manual con `docker exec` luego. Por limpieza, lo dejamos estándar)
+
+volumes:
+  ollama_data:
