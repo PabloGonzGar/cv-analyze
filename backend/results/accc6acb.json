@@ -1,0 +1,54 @@
+{
+    "oferta": {
+        "titulo": "Evaluación de CVs",
+        "descripcion": "Oferta de trabajo – Analista de Datos\r\n\r\nTítulo: Analista de Datos Junior / Mid\r\n\r\nDescripción:\r\nBuscamos un Analista de Datos para transformar datos en información útil que ayude a tomar decisiones. ...",
+        "total_candidatos": 3
+    },
+    "ranking": {
+        "puesto_1": {
+            "nombre": "Carlos Ruiz Martín",
+            "score": 92,
+            "puesto": "Analista de Datos Junior / Mid",
+            "razon": "El candidato tiene experiencia como Analista de Datos Junior y conocimientos en Python, SQL y Power BI, lo que se ajusta perfectamente a los requisitos de la oferta.",
+            "experiencia": "DataSolutions Sevilla, Analista de Datos Junior (2024-2025)",
+            "habilidades": [
+                "Python",
+                "SQL",
+                "Power BI"
+            ],
+            "educacion": "Universidad de Sevilla Grado, Informática (2020-2024)",
+            "id": "late-emerald-mule"
+        },
+        "puesto_2": {
+            "nombre": "Lucía Fernández Gómez",
+            "score": 92,
+            "Puesto": "Analista de Datos Junior/Mid",
+            "razon": "Excelente coincidencia en habilidades y experiencia, destacando la especialización en Power BI y visualización de datos.",
+            "experiencia": "Insight Analytics Madrid - Analista de Datos (Enero 2024 - Actualidad)",
+            "habilidades": [
+                "PowerBI",
+                "SQL",
+                "Análisis",
+                "Lenguaje inglés"
+            ],
+            "educacion": "Universidad Complutense de Madrid - Grado en Estadística (2019-2023)",
+            "id": "minimum-amaranth-slug"
+        },
+        "puesto_3": {
+            "nombre": "David Moreno Castillo",
+            "score": 85,
+            "puesto": "Analista de Datos Junior / Mid",
+            "razon": "El candidato tiene experiencia en desarrollo web y muestra interés en análisis de datos, aunque no tiene experiencia directa en el campo. Sin embargo, su conocimiento de Python y SQL es un buen punto a favor.",
+            "experiencia": "Desarrollador Frontend",
+            "habilidades": [
+                "JavaScript",
+                "HTML",
+                "CSS",
+                "Python",
+                "SQL"
+            ],
+            "educacion": "B1 - IES Tecnológico Ciclo Superior, Desarrollo de Aplicaciones Web (2021-2023)",
+            "id": "necessary-white-iguana"
+        }
+    }
+}

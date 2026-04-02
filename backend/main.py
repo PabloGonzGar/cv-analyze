@@ -13,8 +13,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+
 
 from extractors.pdf_extractor import extract_text_from_pdf
 from extractors.docx_extractor import extract_text_from_docx
@@ -36,8 +36,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Sirve el frontend estático
-app.mount("/app", StaticFiles(directory=BASE_DIR.parent / "frontend" / "public", html=True), name="frontend")
 
 # Almacén en memoria de jobs activos { job_id: {"status": ..., "progress": ...} }
 jobs: dict[str, dict] = {}
@@ -153,7 +151,3 @@ def get_results(job_id: str):
         raise HTTPException(404, "Resultados no disponibles aún")
     return JSONResponse(json.loads(result_path.read_text(encoding="utf-8")))
 
-
-@app.get("/", include_in_schema=False)
-def root():
-    return FileResponse(BASE_DIR.parent / "frontend" / "public" / "index.html")

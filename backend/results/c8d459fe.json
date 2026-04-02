@@ -1,0 +1,27 @@
+{
+    "oferta": {
+        "titulo": "Evaluación de CVs",
+        "descripcion": "Oferta de trabajo – Analista de Datos\r\n\r\nTítulo: Analista de Datos Junior / Mid\r\n\r\nDescripción:\r\nBuscamos un Analista de Datos para transformar datos en información útil que ayude a tomar decisiones. ...",
+        "total_candidatos": 3
+    },
+    "ranking": {
+        "puesto_1": {
+            "id": "late-emerald-mule",
+            "score": 0,
+            "error": "model 'llama3' not found (status code: 404)",
+            "habilidades": []
+        },
+        "puesto_2": {
+            "id": "necessary-white-iguana",
+            "score": 0,
+            "error": "model 'llama3' not found (status code: 404)",
+            "habilidades": []
+        },
+        "puesto_3": {
+            "id": "minimum-amaranth-slug",
+            "score": 0,
+            "error": "model 'llama3' not found (status code: 404)",
+            "habilidades": []
+        }
+    }
+}

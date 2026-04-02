@@ -1,34 +1,79 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  # Aplicación FastAPI
-  api:
-    build: .
-    container_name: cv-ranker-api
-    ports:
-      - "8000:8000"
-    environment:
-      # Apunta al servicio ollama de docker-compose
-      - OLLAMA_HOST=http://ollama:11434
-    depends_on:
-      - ollama
-    volumes:
-      # Persistencia de los uploads y resultados locales
-      - ./backend/uploads:/app/backend/uploads
-      - ./backend/results:/app/backend/results
 
-  # Servicio de Ollama
+  # ── Ollama: motor de LLM local ─────────────────────────────────────────────
   ollama:
     image: ollama/ollama:latest
-    container_name: ollama-server
-    ports:
-      - "11434:11434"
+    container_name: cvranker-ollama
+    restart: unless-stopped
     volumes:
-      # Persistencia para no tener que redescargar los modelos (como llama3) cada vez
+      - ollama_data:/root/.ollama   # modelos persistentes entre reinicios
+    # Para usar GPU NVIDIA, descomenta las líneas siguientes:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend: FastAPI ───────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cvranker-backend
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=http://ollama:11434   # apunta al servicio ollama interno
+    volumes:
+      - uploads_data:/app/uploads         # ZIPs recibidos
+      - results_data:/app/results         # JSONs de resultados
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  # ── Frontend: Nginx ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cvranker-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"       # HTTP público
+      # - "443:443"   # HTTPS (actívalo cuando añadas certificado)
+    depends_on:
+      - backend
+
+  # ── Modelo: descarga llama3 al arrancar ───────────────────────────────────
+  # Este servicio se ejecuta una sola vez y termina.
+  # Si ya tienes el modelo descargado, puedes comentar este bloque.
+  model-puller:
+    image: ollama/ollama:latest
+    container_name: cvranker-model-puller
+    restart: "no"
+    volumes:
       - ollama_data:/root/.ollama
-    # Comando útil para que tras levantar el contenedor descargue 'llama3' si no existe
-    # (El entrypoint oficial arranca el servidor, no suele ser la mejor idea sobrescribirlo todo
-    #  pero se puede hacer manual con `docker exec` luego. Por limpieza, lo dejamos estándar)
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["ollama", "pull", "llama3"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
 
 volumes:
-  ollama_data:
+  ollama_data:    # modelos de Ollama (~4 GB para llama3)
+  uploads_data:   # ZIPs subidos
+  results_data:   # JSONs de resultados

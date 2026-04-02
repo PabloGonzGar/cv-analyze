@@ -1,35 +1,25 @@
-import fitz  # PyMuPDF
-import io
-import logging
-
-logger = logging.getLogger(__name__)
-
-def extract_text_from_pdf(file_path: str) -> str:
-    """
-    Extrae texto de un archivo PDF dado su ruta.
-    """
+from pathlib import Path
+ 
+def extract_text_from_pdf(path: Path) -> str:
+    """Extrae texto de un PDF usando pdfplumber (más fiable que PyPDF2 para CVs)."""
     try:
-        doc = fitz.open(file_path)
-        text = ""
-        for page_num in range(len(doc)):
-            page = doc[page_num]
-            text += page.get_text()
-        return text.strip()
-    except Exception as e:
-        logger.error(f"Error al extraer texto del PDF {file_path}: {e}")
-        return ""
-
-def extract_text_from_pdf_bytes(file_bytes: bytes) -> str:
-    """
-    Extrae texto de un PDF en formato de bytes (útil para archivos subidos vía API).
-    """
-    try:
-        doc = fitz.open(stream=file_bytes, filetype="pdf")
-        text = ""
-        for page_num in range(len(doc)):
-            page = doc[page_num]
-            text += page.get_text()
-        return text.strip()
-    except Exception as e:
-        logger.error(f"Error al extraer texto del PDF desde bytes: {e}")
+        import pdfplumber
+        texto = []
+        with pdfplumber.open(path) as pdf:
+            for page in pdf.pages:
+                t = page.extract_text()
+                if t:
+                    texto.append(t)
+        return "\n".join(texto)
+    except ImportError:
+        # Fallback a PyPDF2 si pdfplumber no está instalado
+        try:
+            from PyPDF2 import PdfReader
+            reader = PdfReader(str(path))
+            return "\n".join(
+                page.extract_text() or "" for page in reader.pages
+            )
+        except Exception:
+            return ""
+    except Exception:
         return ""

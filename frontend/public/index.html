@@ -1,640 +1,108 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CV Ranker — Sistema de Selección</title>
+<title>Talent AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:        #0a0a0f;
-    --surface:   #111118;
-    --surface2:  #1a1a24;
-    --border:    #2a2a3a;
-    --accent:    #e8ff47;
-    --accent2:   #ff6b47;
-    --text:      #e8e8f0;
-    --muted:     #666680;
-    --success:   #47ffb0;
-    --radius:    4px;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    line-height: 1.6;
-    min-height: 100vh;
-  }
-
-  /* ── Noise overlay ── */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none; z-index: 999;
-  }
-
-  /* ── Layout ── */
-  header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 40px;
-    border-bottom: 1px solid var(--border);
-  }
-  .logo {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 28px; letter-spacing: 3px;
-    color: var(--accent);
-  }
-  .logo span { color: var(--muted); }
-
-  main { max-width: 1400px; margin: 0 auto; padding: 40px; }
-
-  /* ── Upload section ── */
-  #upload-section { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 60px; }
-
-  .upload-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 32px;
-  }
-  .upload-card h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 20px; letter-spacing: 2px;
-    color: var(--muted); margin-bottom: 24px;
-  }
-
-  textarea, input[type=text] {
-    width: 100%; background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px; padding: 14px;
-    resize: vertical;
-    transition: border-color .2s;
-  }
-  textarea { min-height: 140px; }
-  textarea:focus, input[type=text]:focus { outline: none; border-color: var(--accent); }
-
-  /* Drop zone */
-  .drop-zone {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 40px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color .2s, background .2s;
-    position: relative;
-  }
-  .drop-zone:hover, .drop-zone.drag-over {
-    border-color: var(--accent); background: rgba(232,255,71,.04);
-  }
-  .drop-zone input[type=file] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer;
-  }
-  .drop-icon { font-size: 36px; margin-bottom: 10px; }
-  .drop-text { color: var(--muted); font-size: 13px; }
-  .drop-text strong { color: var(--accent); }
-  #file-name { margin-top: 10px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--success); }
-
-  /* Submit button */
-  .btn-primary {
-    background: var(--accent); color: #0a0a0f;
-    border: none; border-radius: var(--radius);
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 18px; letter-spacing: 2px;
-    padding: 14px 32px; cursor: pointer;
-    transition: transform .15s, opacity .15s;
-    width: 100%; margin-top: 20px;
-  }
-  .btn-primary:hover { transform: translateY(-1px); opacity: .9; }
-  .btn-primary:disabled { opacity: .35; cursor: not-allowed; transform: none; }
-
-  /* ── Progress bar ── */
-  #progress-section {
-    display: none;
-    margin-bottom: 40px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 28px 32px;
-  }
-  .progress-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
-  .progress-label { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; color: var(--muted); }
-  .progress-count { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--accent); }
-  .progress-track {
-    height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%; background: var(--accent);
-    border-radius: 2px;
-    width: 0%; transition: width .4s ease;
-  }
-
-  /* ── Dashboard ── */
-  #dashboard { display: none; }
-
-  .section-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 14px; letter-spacing: 3px;
-    color: var(--muted);
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  /* Stats row */
-  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 40px; }
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px 24px;
-  }
-  .stat-value {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 42px; line-height: 1;
-    color: var(--accent);
-  }
-  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
-
-  /* Main grid */
-  .dashboard-grid { display: grid; grid-template-columns: 1fr 380px; gap: 24px; }
-
-  /* Ranking table */
-  .ranking-table { width: 100%; border-collapse: collapse; }
-  .ranking-table thead th {
-    font-family: 'DM Mono', monospace; font-size: 11px;
-    color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
-    padding: 10px 16px; text-align: left;
-    border-bottom: 1px solid var(--border);
-  }
-  .ranking-table tbody tr {
-    border-bottom: 1px solid var(--border);
-    transition: background .15s;
-    cursor: pointer;
-  }
-  .ranking-table tbody tr:hover { background: var(--surface2); }
-  .ranking-table tbody td { padding: 14px 16px; vertical-align: middle; }
-
-  .rank-num {
-    font-family: 'Bebas Neue', sans-serif; font-size: 22px;
-    color: var(--muted); width: 40px;
-  }
-  .rank-num.top3 { color: var(--accent); }
-
-  .candidate-name { font-weight: 600; font-size: 15px; }
-  .candidate-role { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-  .score-bar-wrap { display: flex; align-items: center; gap: 12px; }
-  .score-bar-track { flex: 1; height: 3px; background: var(--surface2); border-radius: 2px; }
-  .score-bar-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
-  .score-num { font-family: 'DM Mono', monospace; font-size: 13px; min-width: 32px; text-align: right; }
-
-  .tag-list { display: flex; flex-wrap: wrap; gap: 4px; }
-  .tag {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 2px; padding: 2px 8px;
-    font-size: 11px; color: var(--muted);
-    font-family: 'DM Mono', monospace;
-  }
-  .tag.highlight { border-color: var(--accent); color: var(--accent); }
-
-  /* Right sidebar */
-  .sidebar { display: flex; flex-direction: column; gap: 20px; }
-
-  .side-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-  }
-  .side-card-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 13px; letter-spacing: 2px;
-    color: var(--muted); margin-bottom: 16px;
-  }
-
-  /* Skills chart */
-  .skill-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .skill-name { font-size: 12px; min-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .skill-track { flex: 1; height: 3px; background: var(--surface2); border-radius: 2px; }
-  .skill-fill { height: 100%; background: var(--accent2); border-radius: 2px; transition: width 1s ease; }
-  .skill-count { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); min-width: 20px; text-align: right; }
-
-  /* Score distribution */
-  .dist-bars { display: flex; align-items: flex-end; gap: 4px; height: 60px; }
-  .dist-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .dist-bar {
-    width: 100%; background: var(--surface2); border-radius: 2px 2px 0 0;
-    transition: height .8s ease;
-  }
-  .dist-bar.filled { background: var(--accent); opacity: .7; }
-  .dist-label { font-size: 9px; color: var(--muted); font-family: 'DM Mono', monospace; }
-
-  /* Oferta preview */
-  .oferta-text {
-    font-size: 13px; color: var(--muted); line-height: 1.7;
-    font-style: italic;
-    border-left: 2px solid var(--accent);
-    padding-left: 12px;
-  }
-
-  /* Detail panel */
-  #detail-panel {
-    display: none;
-    position: fixed; right: 0; top: 0; bottom: 0;
-    width: 420px; background: var(--surface);
-    border-left: 1px solid var(--border);
-    padding: 32px; overflow-y: auto;
-    z-index: 100;
-    transform: translateX(100%);
-    transition: transform .3s ease;
-  }
-  #detail-panel.open { display: block; transform: translateX(0); }
-
-  .detail-close {
-    background: none; border: none; color: var(--muted);
-    font-size: 22px; cursor: pointer; float: right;
-    transition: color .15s;
-  }
-  .detail-close:hover { color: var(--text); }
-  .detail-name { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 2px; margin: 16px 0 4px; }
-  .detail-score-big {
-    font-family: 'Bebas Neue', sans-serif; font-size: 72px; line-height: 1;
-    color: var(--accent);
-  }
-  .detail-section { margin-top: 24px; }
-  .detail-section-label {
-    font-size: 11px; letter-spacing: 2px; color: var(--muted);
-    text-transform: uppercase; margin-bottom: 8px;
-  }
-  .detail-value { font-size: 14px; line-height: 1.7; }
-
-  /* Animations */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .animate-in { animation: fadeUp .4s ease both; }
-
-  /* Toast */
-  #toast {
-    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
-    background: var(--surface2); border: 1px solid var(--border);
-    padding: 12px 24px; border-radius: var(--radius);
-    font-size: 13px; color: var(--muted);
-    opacity: 0; transition: opacity .3s;
-    pointer-events: none; z-index: 999;
-  }
-  #toast.show { opacity: 1; }
-
-  @media (max-width: 900px) {
-    #upload-section { grid-template-columns: 1fr; }
-    .stats-row { grid-template-columns: 1fr 1fr; }
-    .dashboard-grid { grid-template-columns: 1fr; }
-    main { padding: 20px; }
-    header { padding: 16px 20px; }
-  }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Karla:ital,wght@0,300;0,400;0,500;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header>
-  <div class="logo">CV<span>/</span>RANKER</div>
-  <div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace" id="header-status">LISTO</div>
-</header>
+<div class="shell">
 
-<main>
-
-  <!-- UPLOAD -->
-  <div id="upload-section">
-    <div class="upload-card">
-      <h2>OFERTA DE TRABAJO</h2>
-      <textarea id="oferta-text" placeholder="Describe el puesto: rol, experiencia requerida, habilidades clave, condiciones…" rows="7"></textarea>
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">Talent AI</div>
+      <div class="logo-sub">Portal de selección</div>
     </div>
-    <div class="upload-card">
-      <h2>CVS (ZIP)</h2>
-      <div class="drop-zone" id="drop-zone">
-        <input type="file" id="file-input" accept=".zip"/>
-        <div class="drop-icon">📦</div>
-        <div class="drop-text">Arrastra tu <strong>.zip</strong> aquí<br>o haz clic para seleccionar</div>
-        <div id="file-name"></div>
+    <div class="nav-item active" data-view="upload" onclick="nav('upload')">
+      <span class="nav-icon">⊕</span> Nuevo análisis
+    </div>
+    <div class="nav-item" data-view="history" onclick="nav('history')">
+      <span class="nav-icon">◫</span> Historial
+      <span class="nav-badge" id="hist-badge"></span>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="theme-row">
+        <span class="theme-lbl" id="theme-lbl">Modo oscuro</span>
+        <div class="sw on" id="theme-sw" onclick="toggleTheme()">
+          <div class="sw-thumb"></div>
+        </div>
       </div>
-      <button class="btn-primary" id="btn-submit" disabled>ANALIZAR CANDIDATOS →</button>
     </div>
-  </div>
+  </nav>
 
-  <!-- PROGRESS -->
-  <div id="progress-section">
-    <div class="progress-header">
-      <span class="progress-label">ANALIZANDO CANDIDATOS</span>
-      <span class="progress-count" id="progress-count">0 / 0</span>
-    </div>
-    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-  </div>
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="page-title" id="page-title">Nuevo análisis</div>
+    <span class="status-badge" id="status-badge">LISTO</span>
+  </header>
 
-  <!-- DASHBOARD -->
-  <div id="dashboard">
+  <!-- CONTENT -->
+  <main class="content">
 
-    <div class="stats-row" id="stats-row"></div>
-
-    <div class="dashboard-grid">
-
-      <div>
-        <div class="section-title">RANKING DE CANDIDATOS</div>
-        <table class="ranking-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Candidato</th>
-              <th>Score</th>
-              <th>Habilidades clave</th>
-            </tr>
-          </thead>
-          <tbody id="ranking-body"></tbody>
-        </table>
+    <!-- UPLOAD -->
+    <div class="view active" id="view-upload">
+      <div class="upload-grid">
+        <div class="card">
+          <div class="card-title">Oferta de trabajo</div>
+          <div class="field-label">Descripción del puesto</div>
+          <textarea class="field" id="oferta-input" rows="7"
+            placeholder="Describe el rol, experiencia requerida, habilidades clave, condiciones…"></textarea>
+        </div>
+        <div class="card">
+          <div class="card-title">Candidatos</div>
+          <div class="field-label">ZIP con CVs (PDF, DOCX, TXT)</div>
+          <div class="drop-zone" id="drop-zone">
+            <input type="file" id="file-input" accept=".zip"/>
+            <div class="drop-icon">⬡</div>
+            <div class="drop-hint">Arrastra el <strong>.zip</strong> aquí<br>o haz clic para seleccionar</div>
+            <div class="drop-fname" id="drop-fname"></div>
+          </div>
+          <button class="btn btn-primary btn-full" id="btn-submit" style="margin-top:16px" disabled>
+            Iniciar análisis →
+          </button>
+        </div>
       </div>
-
-      <div class="sidebar" id="sidebar"></div>
-
+      <div class="card progress-card" id="prog-card" style="display:none">
+        <div class="prog-top">
+          <span class="prog-lbl">Analizando candidatos…</span>
+          <span class="prog-val" id="prog-val">0 / 0</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      </div>
     </div>
-  </div>
 
-</main>
+    <!-- HISTORY -->
+    <div class="view" id="view-history">
+      <div id="hist-content"></div>
+    </div>
 
-<!-- DETAIL PANEL -->
-<div id="detail-panel">
-  <button class="detail-close" onclick="closeDetail()">✕</button>
-  <div id="detail-content"></div>
+    <!-- RESULTS -->
+    <div class="view" id="view-results">
+      <div style="margin-bottom:22px">
+        <button class="btn btn-ghost" onclick="nav('history')">← Historial</button>
+      </div>
+      <div id="results-content"></div>
+    </div>
+
+  </main>
 </div>
 
+<!-- DRAWER -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  <div id="drawer-content"></div>
+</div>
+
+<!-- TOOLTIP / TOAST -->
+<div id="g-tip"></div>
 <div id="toast"></div>
 
-<script>
-const API = '';   // misma origin; ajusta si el back corre en otro puerto
-
-let currentJobId = null;
-let pollInterval = null;
-
-// ── File input ──────────────────────────────────────────────────────────────
-const fileInput  = document.getElementById('file-input');
-const dropZone   = document.getElementById('drop-zone');
-const fileName   = document.getElementById('file-name');
-const btnSubmit  = document.getElementById('btn-submit');
-const ofertaText = document.getElementById('oferta-text');
-
-function checkReady() {
-  btnSubmit.disabled = !(fileInput.files.length && ofertaText.value.trim().length > 20);
-}
-
-fileInput.addEventListener('change', () => {
-  if (fileInput.files[0]) {
-    fileName.textContent = '✓ ' + fileInput.files[0].name;
-  }
-  checkReady();
-});
-
-ofertaText.addEventListener('input', checkReady);
-
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (f && f.name.endsWith('.zip')) {
-    const dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files;
-    fileName.textContent = '✓ ' + f.name;
-    checkReady();
-  } else { toast('Solo se aceptan archivos .zip'); }
-});
-
-// ── Submit ──────────────────────────────────────────────────────────────────
-btnSubmit.addEventListener('click', async () => {
-  const oferta = ofertaText.value.trim();
-  const file   = fileInput.files[0];
-  if (!oferta || !file) return;
-
-  btnSubmit.disabled = true;
-  document.getElementById('header-status').textContent = 'ENVIANDO…';
-
-  const fd = new FormData();
-  fd.append('oferta', oferta);
-  fd.append('file', file);
-
-  try {
-    const res  = await fetch(`${API}/api/upload`, { method: 'POST', body: fd });
-    const data = await res.json();
-
-    if (!res.ok) { toast(data.detail || 'Error en el servidor'); btnSubmit.disabled = false; return; }
-
-    currentJobId = data.job_id;
-    startPolling(data.candidatos);
-    showProgress();
-
-  } catch (e) {
-    toast('No se pudo conectar con el servidor');
-    btnSubmit.disabled = false;
-  }
-});
-
-// ── Polling ─────────────────────────────────────────────────────────────────
-function startPolling(total) {
-  document.getElementById('progress-count').textContent = `0 / ${total}`;
-  pollInterval = setInterval(async () => {
-    try {
-      const res  = await fetch(`${API}/api/status/${currentJobId}`);
-      const data = await res.json();
-
-      const done = data.done || 0;
-      updateProgress(done, data.total || total);
-      document.getElementById('header-status').textContent = `${done}/${data.total} CANDIDATOS`;
-
-      if (data.status === 'done') {
-        clearInterval(pollInterval);
-        await loadResults();
-      } else if (data.status === 'error') {
-        clearInterval(pollInterval);
-        toast('Error durante el análisis: ' + (data.error || 'desconocido'));
-      }
-    } catch (e) { /* silenciar errores de red durante polling */ }
-  }, 1200);
-}
-
-function updateProgress(done, total) {
-  const pct = total ? (done / total) * 100 : 0;
-  document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('progress-count').textContent = `${done} / ${total}`;
-}
-
-// ── Results ─────────────────────────────────────────────────────────────────
-async function loadResults() {
-  const res  = await fetch(`${API}/api/results/${currentJobId}`);
-  const data = await res.json();
-
-  document.getElementById('progress-section').style.display = 'none';
-  document.getElementById('upload-section').style.display   = 'none';
-  document.getElementById('dashboard').style.display        = 'block';
-  document.getElementById('header-status').textContent      = 'ANÁLISIS COMPLETADO';
-
-  renderDashboard(data);
-}
-
-// ── Render ───────────────────────────────────────────────────────────────────
-function scoreColor(s) {
-  if (s >= 75) return 'var(--success)';
-  if (s >= 50) return 'var(--accent)';
-  if (s >= 30) return 'var(--accent2)';
-  return 'var(--muted)';
-}
-
-function renderDashboard(data) {
-  const ranking   = Object.values(data.ranking);
-  const scores    = ranking.map(c => c.score);
-  const avgScore  = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
-  const maxScore  = Math.max(...scores);
-  const qualified = ranking.filter(c => c.score >= 60).length;
-
-  // Habilidades más comunes
-  const skillMap = {};
-  ranking.forEach(c => (c.habilidades || []).forEach(s => {
-    const k = s.toLowerCase().trim();
-    if (k) skillMap[k] = (skillMap[k] || 0) + 1;
-  }));
-  const topSkills = Object.entries(skillMap).sort((a,b) => b[1]-a[1]).slice(0, 10);
-
-  // Stats
-  document.getElementById('stats-row').innerHTML = [
-    { label: 'Candidatos',     value: ranking.length },
-    { label: 'Score Promedio', value: avgScore },
-    { label: 'Score Máximo',   value: maxScore },
-    { label: 'Calificados ≥60',value: qualified },
-  ].map(s => `
-    <div class="stat-card animate-in">
-      <div class="stat-value">${s.value}</div>
-      <div class="stat-label">${s.label}</div>
-    </div>`).join('');
-
-  // Ranking table
-  document.getElementById('ranking-body').innerHTML = ranking.map((c, i) => {
-    const tags = (c.habilidades || []).slice(0, 3)
-      .map(h => `<span class="tag ${i < 3 ? 'highlight' : ''}">${h}</span>`).join('');
-    return `
-    <tr class="animate-in" style="animation-delay:${i * 40}ms" onclick="openDetail(${i})">
-      <td><div class="rank-num ${i < 3 ? 'top3' : ''}">${i+1}</div></td>
-      <td>
-        <div class="candidate-name">${c.nombre || c.id}</div>
-        <div class="candidate-role">${c.puesto || '—'}</div>
-      </td>
-      <td>
-        <div class="score-bar-wrap">
-          <div class="score-bar-track">
-            <div class="score-bar-fill" style="width:${c.score}%;background:${scoreColor(c.score)}"></div>
-          </div>
-          <div class="score-num" style="color:${scoreColor(c.score)}">${c.score}</div>
-        </div>
-      </td>
-      <td><div class="tag-list">${tags}</div></td>
-    </tr>`;
-  }).join('');
-
-  // Sidebar
-  const maxSkill = topSkills[0]?.[1] || 1;
-  const distBuckets = [0,10,20,30,40,50,60,70,80,90].map(min => ({
-    label: min + '+',
-    count: scores.filter(s => s >= min && s < min+10).length
-  }));
-  const maxBucket = Math.max(...distBuckets.map(b => b.count), 1);
-
-  document.getElementById('sidebar').innerHTML = `
-    <div class="side-card animate-in">
-      <div class="side-card-title">OFERTA</div>
-      <div class="oferta-text">${data.oferta.descripcion}</div>
-    </div>
-
-    <div class="side-card animate-in" style="animation-delay:80ms">
-      <div class="side-card-title">HABILIDADES MÁS COMUNES</div>
-      ${topSkills.map(([skill, count]) => `
-        <div class="skill-row">
-          <div class="skill-name">${skill}</div>
-          <div class="skill-track">
-            <div class="skill-fill" style="width:${(count/maxSkill)*100}%"></div>
-          </div>
-          <div class="skill-count">${count}</div>
-        </div>`).join('')}
-    </div>
-
-    <div class="side-card animate-in" style="animation-delay:160ms">
-      <div class="side-card-title">DISTRIBUCIÓN DE SCORES</div>
-      <div class="dist-bars">
-        ${distBuckets.map(b => `
-          <div class="dist-bar-wrap">
-            <div class="dist-bar ${b.count > 0 ? 'filled' : ''}"
-                 style="height:${Math.max(4,(b.count/maxBucket)*52)}px"></div>
-            <div class="dist-label">${b.label}</div>
-          </div>`).join('')}
-      </div>
-    </div>`;
-
-  // Guardar para detail panel
-  window._ranking = ranking;
-}
-
-// ── Detail panel ─────────────────────────────────────────────────────────────
-function openDetail(idx) {
-  const c = window._ranking[idx];
-  const panel = document.getElementById('detail-panel');
-  document.getElementById('detail-content').innerHTML = `
-    <div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:11px">PUESTO ${idx+1} DE ${window._ranking.length}</div>
-    <div class="detail-name">${c.nombre || c.id}</div>
-    <div class="detail-score-big">${c.score}<span style="font-size:24px;color:var(--muted)">/100</span></div>
-    <div class="detail-section">
-      <div class="detail-section-label">Cargo sugerido</div>
-      <div class="detail-value">${c.puesto || '—'}</div>
-    </div>
-    <div class="detail-section">
-      <div class="detail-section-label">Razón del score</div>
-      <div class="detail-value" style="color:var(--muted)">${c.razon || '—'}</div>
-    </div>
-    <div class="detail-section">
-      <div class="detail-section-label">Experiencia</div>
-      <div class="detail-value">${c.experiencia || '—'}</div>
-    </div>
-    <div class="detail-section">
-      <div class="detail-section-label">Educación</div>
-      <div class="detail-value">${c.educacion || '—'}</div>
-    </div>
-    <div class="detail-section">
-      <div class="detail-section-label">Habilidades</div>
-      <div class="tag-list" style="margin-top:6px">
-        ${(c.habilidades||[]).map(h => `<span class="tag highlight">${h}</span>`).join('') || '—'}
-      </div>
-    </div>
-    ${c.error ? `<div class="detail-section" style="color:var(--accent2)">⚠ Error: ${c.error}</div>` : ''}
-  `;
-  panel.classList.add('open');
-}
-
-function closeDetail() {
-  document.getElementById('detail-panel').classList.remove('open');
-}
-
-// ── UI helpers ───────────────────────────────────────────────────────────────
-function showProgress() {
-  document.getElementById('progress-section').style.display = 'block';
-}
-
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3200);
-}
-</script>
+<script src="app.js"></script>
 </body>
 </html>

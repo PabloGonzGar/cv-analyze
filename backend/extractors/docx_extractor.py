@@ -1,30 +1,10 @@
-import docx
-import io
-import logging
-
-logger = logging.getLogger(__name__)
-
-def extract_text_from_docx(file_path: str) -> str:
-    """
-    Extrae texto de un archivo DOCX dada su ruta.
-    """
+from pathlib import Path
+ 
+def extract_text_from_docx(path: Path) -> str:
     try:
-        doc = docx.Document(file_path)
-        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
-        return text.strip()
-    except Exception as e:
-        logger.error(f"Error al extraer texto del DOCX {file_path}: {e}")
+        from docx import Document
+        doc = Document(str(path))
+        return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+    except Exception:
         return ""
-
-def extract_text_from_docx_bytes(file_bytes: bytes) -> str:
-    """
-    Extrae texto de un archivo DOCX en formato de bytes (útil para archivos subidos vía API).
-    """
-    try:
-        # Se requiere envolver los bytes en un objeto BytesIO para que docx lo trate como archivo
-        doc = docx.Document(io.BytesIO(file_bytes))
-        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
-        return text.strip()
-    except Exception as e:
-        logger.error(f"Error al extraer texto del DOCX desde bytes: {e}")
-        return ""
+ 

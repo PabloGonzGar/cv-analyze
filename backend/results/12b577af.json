@@ -1,0 +1,53 @@
+{
+    "oferta": {
+        "titulo": "Evaluación de CVs",
+        "descripcion": "Oferta de trabajo – Analista de Datos\r\n\r\nTítulo: Analista de Datos Junior / Mid\r\n\r\nDescripción:\r\nBuscamos un Analista de Datos para transformar datos en información útil que ayude a tomar decisiones. ...",
+        "total_candidatos": 3
+    },
+    "ranking": {
+        "puesto_1": {
+            "nombre": "Carlos Ruiz Martín",
+            "score": 95,
+            "Puesto": "Analista de Datos Junior / Mid",
+            "razon": "Excelente coincidencia entre habilidades y responsabilidades. La experiencia en DataSolutions Sevilla es relevante y la formación en Power BI y Python es un valor añadido.",
+            "experiencia": "Analista de Datos Junior 2024 - 2025, DataSolutions Sevilla",
+            "habilidades": [
+                "Python",
+                "SQL",
+                "Power BI"
+            ],
+            "educacion": "Grado en Informática, Universidad de Sevilla (2020-2024)",
+            "id": "late-emerald-mule"
+        },
+        "puesto_2": {
+            "nombre": "Lucía Fernández Gómez",
+            "score": 92,
+            "puesto": "",
+            "razon": "El candidato tiene experiencia en Power BI y analítica, lo que es clave para el puesto. Además, posee habilidades en SQL y presenta un pensamiento analítico. La educación en estadística también es relevante.",
+            "experiencia": "Analista de Datos en Insight Analytics Madrid",
+            "habilities": [
+                "PowerBI",
+                "SQL",
+                "Visualización de datos",
+                "Análisis de patrones"
+            ],
+            "educacion": "Universidad Complutense de Madrid, Grado en Estadística (2019-2023)",
+            "id": "minimum-amaranth-slug",
+            "habilidades": []
+        },
+        "puesto_3": {
+            "nombre": "David Moreno Castillo",
+            "score": 85,
+            "puesto": "Analista de Datos Junior / Mid",
+            "razon": "Excelente conjunto de habilidades en desarrollo web y conocimientos básicos en datos. Sin embargo, falta experiencia específica en análisis de datos y herramientas como Python o SQL.",
+            "experiencia": "Desarrollador Frontend (2023-2025) en WebFactory Málaga",
+            "habilidades": [
+                "JavaScript",
+                "HTML",
+                "CSS"
+            ],
+            "educacion": "B1 en Desarrollo de Aplicaciones Web (2021-2023)",
+            "id": "necessary-white-iguana"
+        }
+    }
+}
