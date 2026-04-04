@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Talent AI</title>
+<meta name="description" content="CV Ranker — Sistema inteligente de selección de candidatos"/>
+<title>CV Ranker · Selección inteligente</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Karla:ital,wght@0,300;0,400;0,500;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,78 +15,224 @@
 <div class="shell">
 
   <!-- SIDEBAR -->
-  <nav class="sidebar">
-    <div class="logo">
-      <div class="logo-mark">Talent AI</div>
-      <div class="logo-sub">Portal de selección</div>
-    </div>
-    <div class="nav-item active" data-view="upload" onclick="nav('upload')">
-      <span class="nav-icon">⊕</span> Nuevo análisis
-    </div>
-    <div class="nav-item" data-view="history" onclick="nav('history')">
-      <span class="nav-icon">◫</span> Historial
-      <span class="nav-badge" id="hist-badge"></span>
-    </div>
-    <div class="sidebar-bottom">
-      <div class="theme-row">
-        <span class="theme-lbl" id="theme-lbl">Modo oscuro</span>
-        <div class="sw on" id="theme-sw" onclick="toggleTheme()">
-          <div class="sw-thumb"></div>
+  <nav class="sidebar" role="navigation" aria-label="Navegación principal">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+            <rect x="2" y="2" width="11" height="11" rx="2.5" fill="currentColor"/>
+            <rect x="17" y="2" width="11" height="11" rx="2.5" fill="currentColor" opacity=".45"/>
+            <rect x="2" y="17" width="11" height="11" rx="2.5" fill="currentColor" opacity=".45"/>
+            <rect x="17" y="17" width="11" height="11" rx="2.5" fill="currentColor" opacity=".2"/>
+          </svg>
         </div>
+        <div class="logo-text">
+          <span class="logo-name">CV Ranker</span>
+          <span class="logo-tagline">Selección inteligente</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <p class="nav-section-label">Menú</p>
+
+      <button class="nav-item active" data-view="upload" onclick="nav('upload')" aria-current="page">
+        <span class="nav-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <path d="M7.5 1v9M3.5 6l4-4 4 4M1.5 11.5h12v2h-12z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span>Nuevo análisis</span>
+      </button>
+
+      <button class="nav-item" data-view="history" onclick="nav('history')">
+        <span class="nav-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <rect x="1.5" y="3" width="12" height="10.5" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M4.5 1v3M10.5 1v3M1.5 7h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span>Historial</span>
+        <span class="nav-badge" id="hist-badge"></span>
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="theme-control">
+        <span class="theme-icon" aria-hidden="true" id="theme-icon">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M9.01 9.01l1.06 1.06M2.93 11.07l1.06-1.06M9.01 4.99l1.06-1.06" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="theme-lbl" id="theme-lbl">Modo oscuro</span>
+        <button
+          class="sw on"
+          id="theme-sw"
+          onclick="toggleTheme()"
+          role="switch"
+          aria-checked="true"
+          aria-label="Cambiar tema"
+        >
+          <span class="sw-thumb"></span>
+        </button>
       </div>
     </div>
   </nav>
 
   <!-- TOPBAR -->
   <header class="topbar">
-    <div class="page-title" id="page-title">Nuevo análisis</div>
-    <span class="status-badge" id="status-badge">LISTO</span>
+    <div class="topbar-left">
+      <h1 class="page-title" id="page-title">Nuevo análisis</h1>
+    </div>
+    <div class="topbar-right">
+      <div class="status-pill" id="status-pill">
+        <span class="status-dot" id="status-dot" data-state="idle"></span>
+        <span id="status-badge">Listo</span>
+      </div>
+    </div>
   </header>
 
   <!-- CONTENT -->
-  <main class="content">
+  <main class="content" id="main-content">
 
-    <!-- UPLOAD -->
+    <!-- ── VIEW: UPLOAD ── -->
     <div class="view active" id="view-upload">
+
+      <div class="view-intro">
+        <h2 class="view-heading">Configura el análisis</h2>
+        <p class="view-sub">Define la oferta y sube los CVs. El sistema los evaluará y generará un ranking con puntuación detallada.</p>
+      </div>
+
       <div class="upload-grid">
-        <div class="card">
-          <div class="card-title">Oferta de trabajo</div>
-          <div class="field-label">Descripción del puesto</div>
-          <textarea class="field" id="oferta-input" rows="7"
-            placeholder="Describe el rol, experiencia requerida, habilidades clave, condiciones…"></textarea>
-        </div>
-        <div class="card">
-          <div class="card-title">Candidatos</div>
-          <div class="field-label">ZIP con CVs (PDF, DOCX, TXT)</div>
-          <div class="drop-zone" id="drop-zone">
-            <input type="file" id="file-input" accept=".zip"/>
-            <div class="drop-icon">⬡</div>
-            <div class="drop-hint">Arrastra el <strong>.zip</strong> aquí<br>o haz clic para seleccionar</div>
-            <div class="drop-fname" id="drop-fname"></div>
+
+        <section class="card" aria-label="Oferta de trabajo">
+          <div class="card-header">
+            <div class="card-icon-wrap" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/>
+                <path d="M4.5 5.5h7M4.5 8h7M4.5 10.5h4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="card-title">Descripción de la oferta</h3>
           </div>
-          <button class="btn btn-primary btn-full" id="btn-submit" style="margin-top:16px" disabled>
-            Iniciar análisis →
+          <div class="field-group">
+            <label class="field-label" for="oferta-input">
+              Describe el puesto
+              <span class="field-hint">Cuanta más información, mejores resultados</span>
+            </label>
+            <textarea
+              class="field"
+              id="oferta-input"
+              rows="8"
+              placeholder="Ej: Se busca diseñadora gráfica senior con más de 5 años de experiencia, experta en branding, identidad visual y liderazgo de equipos creativos…"
+            ></textarea>
+            <div class="field-footer">
+              <span class="char-count" id="char-count">0 caracteres</span>
+              <span class="char-tip">Mínimo 20 caracteres</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="card card--upload" aria-label="Subir CVs">
+          <div class="card-header">
+            <div class="card-icon-wrap" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 1v8M5 5l3-3 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2.5 11v1.5a1 1 0 001 1h9a1 1 0 001-1V11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="card-title">Candidatos (ZIP)</h3>
+          </div>
+
+          <div class="drop-zone" id="drop-zone" role="button" tabindex="0">
+            <input type="file" id="file-input" accept=".zip" aria-hidden="true" tabindex="-1"/>
+            <div id="drop-idle">
+              <div class="drop-hex-wrap" aria-hidden="true">
+                <div class="drop-hex">
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                    <path d="M18 3L33 11.25V28.75L18 37L3 28.75V11.25L18 3Z" stroke="currentColor" stroke-width="1.3"/>
+                    <path d="M18 13v8M15 17l3-3 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+              <p class="drop-title">Arrastra tu <strong>.zip</strong> aquí</p>
+              <p class="drop-sub">o <span class="drop-link">haz clic para seleccionar</span></p>
+              <div class="drop-tags">
+                <span class="drop-tag">PDF</span>
+                <span class="drop-tag">DOCX</span>
+                <span class="drop-tag">TXT</span>
+              </div>
+            </div>
+            <div id="drop-ready" hidden>
+              <div class="drop-ready-icon" aria-hidden="true">
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                  <circle cx="18" cy="18" r="15" stroke="currentColor" stroke-width="1.3"/>
+                  <path d="M11 18l5 5 9-10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <p class="drop-fname" id="drop-fname"></p>
+              <p class="drop-change">Clic para cambiar archivo</p>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-full" id="btn-submit" disabled>
+            <span class="btn-text">Iniciar análisis</span>
+            <svg class="btn-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
+
+          <p class="upload-note">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+              <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/>
+              <path d="M5.5 4.5v3.5M5.5 3v.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+            </svg>
+            Máx. 50 MB · Los archivos no se almacenan permanentemente
+          </p>
+        </section>
+
+      </div>
+
+      <!-- Progress -->
+      <div class="card prog-card" id="prog-card" style="display:none" role="status" aria-live="polite">
+        <div class="prog-header">
+          <div class="prog-info">
+            <div class="prog-spinner" aria-hidden="true"></div>
+            <div>
+              <p class="prog-title">Analizando candidatos</p>
+              <p class="prog-detail">El modelo evalúa cada CV con inteligencia artificial…</p>
+            </div>
+          </div>
+          <span class="prog-counter" id="prog-val" aria-live="polite">0 / 0</span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-fill" id="prog-fill">
+            <div class="prog-shimmer" aria-hidden="true"></div>
+          </div>
         </div>
       </div>
-      <div class="card progress-card" id="prog-card" style="display:none">
-        <div class="prog-top">
-          <span class="prog-lbl">Analizando candidatos…</span>
-          <span class="prog-val" id="prog-val">0 / 0</span>
-        </div>
-        <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
-      </div>
+
     </div>
 
-    <!-- HISTORY -->
+    <!-- ── VIEW: HISTORY ── -->
     <div class="view" id="view-history">
+      <div class="view-intro">
+        <h2 class="view-heading">Historial de análisis</h2>
+        <p class="view-sub">Todos los procesos completados, ordenados por fecha.</p>
+      </div>
       <div id="hist-content"></div>
     </div>
 
-    <!-- RESULTS -->
+    <!-- ── VIEW: RESULTS ── -->
     <div class="view" id="view-results">
-      <div style="margin-bottom:22px">
-        <button class="btn btn-ghost" onclick="nav('history')">← Historial</button>
+      <div class="results-topbar">
+        <button class="btn btn-ghost btn-back" onclick="nav('history')">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+            <path d="M8.5 2L4 6.5l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Historial
+        </button>
       </div>
       <div id="results-content"></div>
     </div>
@@ -93,15 +241,26 @@
 </div>
 
 <!-- DRAWER -->
-<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
-<div class="drawer" id="drawer">
-  <button class="drawer-close" onclick="closeDrawer()">✕</button>
-  <div id="drawer-content"></div>
-</div>
+<div class="overlay" id="overlay" onclick="closeDrawer()" aria-hidden="true"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-name" hidden>
+  <div class="drawer-inner">
+    <div class="drawer-topbar">
+      <button class="drawer-close" onclick="closeDrawer()" aria-label="Cerrar panel">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+          <path d="M2.5 2.5l10 10M12.5 2.5l-10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div id="drawer-content" class="drawer-content"></div>
+  </div>
+</aside>
 
-<!-- TOOLTIP / TOAST -->
-<div id="g-tip"></div>
-<div id="toast"></div>
+<!-- GLOBALS -->
+<div id="g-tip" role="tooltip" aria-hidden="true"></div>
+<div id="toast" role="alert" aria-live="assertive"></div>
+
+<!-- Skip link (accesibilidad) -->
+<a href="#main-content" class="skip-link">Ir al contenido</a>
 
 <script src="app.js"></script>
 </body>
