@@ -12,6 +12,37 @@
 </head>
 <body>
 
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay" style="display: flex;">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="logo-icon" aria-hidden="true" style="margin-bottom: 24px;">
+        <svg width="40" height="40" viewBox="0 0 30 30" fill="none">
+          <rect x="2" y="2" width="11" height="11" rx="2.5" fill="currentColor"/>
+          <rect x="17" y="2" width="11" height="11" rx="2.5" fill="currentColor" opacity=".45"/>
+          <rect x="2" y="17" width="11" height="11" rx="2.5" fill="currentColor" opacity=".45"/>
+          <rect x="17" y="17" width="11" height="11" rx="2.5" fill="currentColor" opacity=".2"/>
+        </svg>
+      </div>
+      <h2 style="margin:0; font-family:var(--font-heading); color:var(--text-1);">CV Ranker</h2>
+      <p style="color:var(--text-3); font-size:14px; margin-top:8px;">Acceso administrativo</p>
+    </div>
+    <form id="login-form">
+      <div class="field-group">
+        <label class="field-label" for="login-username">Usuario</label>
+        <input type="text" id="login-username" class="field" required autocomplete="username">
+      </div>
+      <div class="field-group" style="margin-top: 16px;">
+        <label class="field-label" for="login-password">Contraseña</label>
+        <input type="password" id="login-password" class="field" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="btn-login" style="margin-top: 24px;">
+        <span class="btn-text">Iniciar Sesión</span>
+      </button>
+    </form>
+  </div>
+</div>
+
 <div class="shell">
 
   <!-- SIDEBAR -->
@@ -77,6 +108,15 @@
           <span class="sw-thumb"></span>
         </button>
       </div>
+      
+      <button class="nav-item btn-logout" id="btn-logout" onclick="logout()" style="margin-top: 16px; color: var(--score-lo); opacity: 0.8;">
+        <span class="nav-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <path d="M10.5 7.5h-7m4-4l3.5 4-3.5 4m-4.5 2h-1a2 2 0 01-2-2v-9a2 2 0 012-2h1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span>Cerrar sesión</span>
+      </button>
     </div>
   </nav>
 

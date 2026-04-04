@@ -10,8 +10,10 @@ import shutil
 import uuid
 import zipfile
 from pathlib import Path
+from datetime import timedelta
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Depends, status
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -19,6 +21,7 @@ from fastapi.responses import JSONResponse
 from extractors.pdf_extractor import extract_text_from_pdf
 from extractors.docx_extractor import extract_text_from_docx
 from ranker import procesar_todos
+from auth import init_db, verify_password, get_user_db, create_access_token, get_current_user, ACCESS_TOKEN_EXPIRE_MINUTES
 
 # ── Directorios ────────────────────────────────────────────────────────────────
 BASE_DIR    = Path(__file__).parent
@@ -26,6 +29,9 @@ UPLOAD_DIR  = BASE_DIR / "uploads"
 RESULTS_DIR = BASE_DIR / "results"
 UPLOAD_DIR.mkdir(exist_ok=True)
 RESULTS_DIR.mkdir(exist_ok=True)
+
+# Inicializar Base de datos de Auth
+init_db()
 
 app = FastAPI(title="CV Ranker API", version="2.0")
 
@@ -91,10 +97,27 @@ async def run_ranking_job(job_id: str, oferta: str, cvs: dict[str, str]):
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
+
+@app.post("/api/login", summary="Autenticación de administrador")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = get_user_db(form_data.username)
+    if not user or not verify_password(form_data.password, user["hashed_password"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user["username"]}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
 @app.post("/api/upload", summary="Subir ZIP de CVs + texto de oferta")
 async def upload_cvs(
     oferta: str      = Form(..., description="Texto completo de la oferta de trabajo"),
-    file:   UploadFile = File(..., description="ZIP con los CVs (PDF, DOCX, TXT)")
+    file:   UploadFile = File(..., description="ZIP con los CVs (PDF, DOCX, TXT)"),
+    current_user: dict = Depends(get_current_user)
 ):
     if not file.filename.endswith(".zip"):
         raise HTTPException(400, "Solo se admiten archivos .zip")
@@ -127,7 +150,7 @@ async def upload_cvs(
 
 
 @app.get("/api/status/{job_id}", summary="Estado del job")
-def get_status(job_id: str):
+def get_status(job_id: str, current_user: dict = Depends(get_current_user)):
     job = jobs.get(job_id)
     if not job:
         raise HTTPException(404, "Job no encontrado")
@@ -145,7 +168,7 @@ def get_status(job_id: str):
 
 
 @app.get("/api/results/{job_id}", summary="Resultados completos del ranking")
-def get_results(job_id: str):
+def get_results(job_id: str, current_user: dict = Depends(get_current_user)):
     result_path = RESULTS_DIR / f"{job_id}.json"
     if not result_path.exists():
         raise HTTPException(404, "Resultados no disponibles aún")

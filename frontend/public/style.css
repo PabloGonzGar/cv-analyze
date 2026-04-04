@@ -1415,3 +1415,32 @@ textarea.field:focus {
   .hist-stats { gap: 12px; }
   .hstat-val { font-size: 22px; }
 }
+/* --- LOGIN OVERLAY --- */
+#login-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#login-overlay[hidden] {
+  display: none !important;
+}
+
+.login-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.login-header {
+  margin-bottom: 32px;
+}

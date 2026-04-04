@@ -22,7 +22,7 @@ def procesar_zip_a_csv(ruta_zip, carpeta_destino="cvs_limpios"):
     # Crear carpeta de destino si no existe
     if not os.path.exists(carpeta_destino):
         os.makedirs(carpeta_destino)
-        print(f"📁 Carpeta '{carpeta_destino}' creada.")
+        print(f"Carpeta '{carpeta_destino}' creada.")
 
     try:
         with zipfile.ZipFile(ruta_zip, 'r') as z:
@@ -30,10 +30,10 @@ def procesar_zip_a_csv(ruta_zip, carpeta_destino="cvs_limpios"):
             archivos_pdf = [f for f in z.namelist() if f.lower().endswith('.pdf')]
             
             if not archivos_pdf:
-                print("❌ No se encontraron archivos PDF en el ZIP.")
+                print("No se encontraron archivos PDF en el ZIP.")
                 return
 
-            print(f"📦 Encontrados {len(archivos_pdf)} PDFs. Procesando...")
+            print(f"Encontrados {len(archivos_pdf)} PDFs. Procesando...")
 
             for nombre_pdf in archivos_pdf:
                 try:
@@ -58,13 +58,13 @@ def procesar_zip_a_csv(ruta_zip, carpeta_destino="cvs_limpios"):
                         writer.writerow(['archivo', 'contenido']) # Cabecera
                         writer.writerow([nombre_pdf, texto_limpio])
                     
-                    print(f"✅ Procesado: {nombre_base}.csv")
+                    print(f"Procesado: {nombre_base}.csv")
 
                 except Exception as e:
-                    print(f"⚠️ Error procesando {nombre_pdf}: {e}")
+                    print(f"Error procesando {nombre_pdf}: {e}")
 
     except Exception as e:
-        print(f"❌ Error al abrir el ZIP: {e}")
+        print(f"Error al abrir el ZIP: {e}")
 
 # --- EJECUCIÓN ---
 if __name__ == "__main__":

@@ -4,12 +4,70 @@
 ═══════════════════════════════════════════ */
 
 /* ─── STATE ─── */
-const API      = '';
+const API      = 'http://localhost:8000';
 let currentJob = null;
 let pollTimer  = null;
 let historyDB  = JSON.parse(localStorage.getItem('cvr_history') || '[]');
 let _ranking   = [];
 let _topSkills = [];
+
+/* ─── AUTH ─── */
+const token = localStorage.getItem('cvr_token');
+if (token) {
+  document.getElementById('login-overlay').hidden = true;
+}
+
+document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const username = form.querySelector('#login-username').value;
+  const password = form.querySelector('#login-password').value;
+  const btn = form.querySelector('#btn-login');
+
+  btn.disabled = true;
+  btn.querySelector('.btn-text').textContent = 'Comprobando...';
+
+  const fd = new URLSearchParams();
+  fd.append('username', username);
+  fd.append('password', password);
+
+  try {
+    const r = await fetch(`${API}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: fd
+    });
+    if (!r.ok) throw new Error('Credenciales incorrectas');
+    const d = await r.json();
+    localStorage.setItem('cvr_token', d.access_token);
+    document.getElementById('login-overlay').hidden = true;
+    form.reset();
+  } catch (err) {
+    toast(err.message, 4000);
+  } finally {
+    btn.disabled = false;
+    btn.querySelector('.btn-text').textContent = 'Iniciar Sesión';
+  }
+});
+
+function logout() {
+  localStorage.removeItem('cvr_token');
+  document.getElementById('login-overlay').hidden = false;
+}
+
+// Wrapper for fetch to inject token & handle 401
+async function authFetch(url, options = {}) {
+  const t = localStorage.getItem('cvr_token');
+  options.headers = options.headers || {};
+  if (t) options.headers['Authorization'] = `Bearer ${t}`;
+  
+  const res = await fetch(url, options);
+  if (res.status === 401) {
+    logout();
+    throw new Error('Sesión expirada o inválida');
+  }
+  return res;
+}
 
 /* ─── THEME ─── */
 (function () {
@@ -148,7 +206,7 @@ btnSubmit.addEventListener('click', async () => {
   fd.append('file', file);
 
   try {
-    const r = await fetch(`${API}/api/upload`, { method: 'POST', body: fd });
+    const r = await authFetch(`${API}/api/upload`, { method: 'POST', body: fd });
     const d = await r.json();
     if (!r.ok) { toast(d.detail || 'Error en el servidor'); btnSubmit.disabled = false; setStatus('Error', 'error'); return; }
 
@@ -168,7 +226,7 @@ function startPoll(total) {
   clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
     try {
-      const r = await fetch(`${API}/api/status/${currentJob.id}`);
+      const r = await authFetch(`${API}/api/status/${currentJob.id}`);
       const d = await r.json();
       updateProg(d.done || 0, d.total || total);
       setStatus(`${d.done || 0} / ${d.total || total}`, 'running');
@@ -201,7 +259,7 @@ function updateProg(done, total) {
 }
 
 async function loadResults(jobId, ofertaPreview, ts) {
-  const r = await fetch(`${API}/api/results/${jobId}`);
+  const r = await authFetch(`${API}/api/results/${jobId}`);
   const d = await r.json();
 
   const entry = {
