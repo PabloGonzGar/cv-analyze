@@ -1,0 +1,22 @@
+# ── Seguridad — NUNCA subir estos archivos ────────────────────
+.env
+.env.*
+!.env.example        # sí subir el ejemplo sin valores reales
+
+# ── Python ─────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ── Datos generados en runtime ─────────────────────────────────
+backend/uploads/
+backend/results/
+backend/data/          # contiene auth.db con hashes de contraseñas
+
+# ── Docker ─────────────────────────────────────────────────────
+*.log
+
+# ── macOS ──────────────────────────────────────────────────────
+.DS_Store

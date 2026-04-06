@@ -12,7 +12,71 @@
 </head>
 <body>
 
-<div class="shell">
+<!-- ══════════════════════════════
+     PANTALLA DE LOGIN
+══════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon" aria-hidden="true">
+        <svg width="32" height="32" viewBox="0 0 30 30" fill="none">
+          <rect x="2" y="2" width="11" height="11" rx="2.5" fill="currentColor"/>
+          <rect x="17" y="2" width="11" height="11" rx="2.5" fill="currentColor" opacity=".45"/>
+          <rect x="2" y="17" width="11" height="11" rx="2.5" fill="currentColor" opacity=".45"/>
+          <rect x="17" y="17" width="11" height="11" rx="2.5" fill="currentColor" opacity=".2"/>
+        </svg>
+      </div>
+      <div>
+        <div class="login-logo-name">CV Ranker</div>
+        <div class="login-logo-sub">Selección inteligente</div>
+      </div>
+    </div>
+
+    <h1 class="login-heading">Accede a tu cuenta</h1>
+    <p class="login-sub">Introduce tus credenciales para continuar</p>
+
+    <form id="login-form" novalidate>
+      <div class="login-field">
+        <label class="field-label" for="login-username">Usuario</label>
+        <input
+          class="field login-input"
+          type="text"
+          id="login-username"
+          name="username"
+          autocomplete="username"
+          placeholder="admin"
+          required
+        />
+      </div>
+      <div class="login-field">
+        <label class="field-label" for="login-password">Contraseña</label>
+        <div class="login-pass-wrap">
+          <input
+            class="field login-input"
+            type="password"
+            id="login-password"
+            name="password"
+            autocomplete="current-password"
+            placeholder="••••••••"
+            required
+          />
+          <button type="button" class="login-eye" onclick="togglePass()" aria-label="Mostrar contraseña" tabindex="-1">
+            <svg id="eye-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.4"/>
+              <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.4"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <p class="login-error" id="login-error" role="alert"></p>
+      <button class="btn btn-primary btn-full" type="submit" id="login-btn">
+        Iniciar sesión
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="shell" id="shell" style="display:none">
 
   <!-- SIDEBAR -->
   <nav class="sidebar" role="navigation" aria-label="Navegación principal">
@@ -75,6 +139,15 @@
           aria-label="Cambiar tema"
         >
           <span class="sw-thumb"></span>
+        </button>
+      </div>
+      <div class="logout-row">
+        <span class="logout-user" id="user-display"></span>
+        <button class="btn-logout" onclick="logout()">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M5 2H2a1 1 0 00-1 1v8a1 1 0 001 1h3M9.5 10l3-3-3-3M12.5 7H5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Salir
         </button>
       </div>
     </div>

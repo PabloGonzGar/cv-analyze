@@ -1,29 +1,19 @@
-version: "3.9"
-
 services:
 
-  # ── Ollama: motor de LLM local ─────────────────────────────────────────────
+  # ── Ollama ─────────────────────────────────────────────────────────────────
   ollama:
     image: ollama/ollama:latest
     container_name: cvranker-ollama
     restart: unless-stopped
     volumes:
-      - ollama_data:/root/.ollama   # modelos persistentes entre reinicios
-    # Para usar GPU NVIDIA, descomenta las líneas siguientes:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
+      - ollama_data:/root/.ollama
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434"]
       interval: 15s
       timeout: 5s
       retries: 5
 
-  # ── Backend: FastAPI ───────────────────────────────────────────────────────
+  # ── Backend ────────────────────────────────────────────────────────────────
   backend:
     build:
       context: ./backend
@@ -31,20 +21,23 @@ services:
     container_name: cvranker-backend
     restart: unless-stopped
     environment:
-      - OLLAMA_HOST=http://ollama:11434   # apunta al servicio ollama interno
+      - OLLAMA_HOST=http://ollama:11434
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
-      - uploads_data:/app/uploads         # ZIPs recibidos
-      - results_data:/app/results         # JSONs de resultados
+      - uploads_data:/app/uploads
+      - results_data:/app/results
+      - auth_data:/app/data        # ← BD SQLite de usuarios
     depends_on:
       ollama:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 20s
       timeout: 5s
       retries: 3
 
-  # ── Frontend: Nginx ────────────────────────────────────────────────────────
+  # ── Frontend ───────────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -52,14 +45,11 @@ services:
     container_name: cvranker-frontend
     restart: unless-stopped
     ports:
-      - "80:80"       # HTTP público
-      # - "443:443"   # HTTPS (actívalo cuando añadas certificado)
+      - "80:80"
     depends_on:
       - backend
 
-  # ── Modelo: descarga llama3 al arrancar ───────────────────────────────────
-  # Este servicio se ejecuta una sola vez y termina.
-  # Si ya tienes el modelo descargado, puedes comentar este bloque.
+  # ── Descarga del modelo (se ejecuta una sola vez) ──────────────────────────
   model-puller:
     image: ollama/ollama:latest
     container_name: cvranker-model-puller
@@ -74,6 +64,7 @@ services:
       - OLLAMA_HOST=http://ollama:11434
 
 volumes:
-  ollama_data:    # modelos de Ollama (~4 GB para llama3)
-  uploads_data:   # ZIPs subidos
-  results_data:   # JSONs de resultados
+  ollama_data:
+  uploads_data:
+  results_data:
+  auth_data:       # ← persiste auth.db entre reinicios del contenedor

@@ -1,34 +1,132 @@
 /* ═══════════════════════════════════════════
-   CV RANKER — app.js
-   Actualizado para el nuevo sistema de diseño
+   CV RANKER — app.js v3
+   Con autenticación JWT completa
 ═══════════════════════════════════════════ */
 
+/* ─── CONFIG ─── */
+const API = '';
+
+/* ─── AUTH ─────────────────────────────────────────────────── */
+function getToken()          { return localStorage.getItem('cvr_token'); }
+function getUsername()       { return localStorage.getItem('cvr_username'); }
+function setAuth(token, username) {
+  localStorage.setItem('cvr_token', token);
+  localStorage.setItem('cvr_username', username);
+}
+function clearAuth() {
+  localStorage.removeItem('cvr_token');
+  localStorage.removeItem('cvr_username');
+}
+function isLoggedIn() { return !!getToken(); }
+
+/* Fetch con JWT automático */
+async function apiFetch(url, options = {}) {
+  const token = getToken();
+  const headers = { ...(options.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(API + url, { ...options, headers });
+  if (res.status === 401) {
+    clearAuth();
+    showLogin();
+    throw new Error('Sesión expirada');
+  }
+  return res;
+}
+
 /* ─── STATE ─── */
-const API      = '';
 let currentJob = null;
 let pollTimer  = null;
 let historyDB  = JSON.parse(localStorage.getItem('cvr_history') || '[]');
 let _ranking   = [];
 let _topSkills = [];
 
-/* ─── THEME ─── */
-(function () {
-  const t = localStorage.getItem('cvr_theme') || 'dark';
-  applyTheme(t);
-})();
+/* ─── INIT ─── */
+document.addEventListener('DOMContentLoaded', () => {
+  applyTheme(localStorage.getItem('cvr_theme') || 'dark');
+  if (isLoggedIn()) {
+    showApp();
+    updateHistBadge();
+  } else {
+    showLogin();
+  }
+});
 
+/* ─── LOGIN / LOGOUT VIEWS ─── */
+function showLogin() {
+  const loginEl = document.getElementById('login-screen');
+  const shellEl = document.getElementById('shell');
+  if (loginEl) loginEl.classList.remove('hidden');
+  if (shellEl) shellEl.style.display = 'none';
+  setTimeout(() => document.getElementById('login-username')?.focus(), 80);
+}
+
+function showApp() {
+  const loginEl = document.getElementById('login-screen');
+  const shellEl = document.getElementById('shell');
+  if (loginEl) loginEl.classList.add('hidden');
+  if (shellEl) shellEl.style.display = 'grid';
+  const u = getUsername();
+  const el = document.getElementById('user-display');
+  if (el && u) el.textContent = u;
+}
+
+function logout() {
+  clearAuth();
+  historyDB = [];
+  _ranking  = [];
+  localStorage.removeItem('cvr_history');
+  clearInterval(pollTimer);
+  showLogin();
+}
+
+/* ─── LOGIN FORM ─── */
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('login-form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const btn      = document.getElementById('login-btn');
+    const err      = document.getElementById('login-error');
+
+    btn.disabled    = true;
+    btn.textContent = 'Accediendo…';
+    err.textContent = '';
+
+    const fd = new FormData();
+    fd.append('username', username);
+    fd.append('password', password);
+
+    try {
+      const res  = await fetch(`${API}/api/login`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        err.textContent  = data.detail || 'Usuario o contraseña incorrectos';
+        btn.disabled     = false;
+        btn.textContent  = 'Iniciar sesión';
+        return;
+      }
+      setAuth(data.access_token, data.username);
+      showApp();
+      updateHistBadge();
+    } catch {
+      err.textContent = 'No se pudo conectar con el servidor';
+      btn.disabled    = false;
+      btn.textContent = 'Iniciar sesión';
+    }
+  });
+});
 function applyTheme(t) {
   document.documentElement.setAttribute('data-theme', t);
   const sw  = document.getElementById('theme-sw');
   const lbl = document.getElementById('theme-lbl');
   const ico = document.getElementById('theme-icon');
   const isDark = t === 'dark';
-
-  sw.classList.toggle('on', isDark);
-  sw.setAttribute('aria-checked', String(isDark));
-  lbl.textContent = isDark ? 'Modo oscuro' : 'Modo claro';
-
-  // Swap icono: luna ↔ sol
+  if (sw)  sw.classList.toggle('on', isDark);
+  if (sw)  sw.setAttribute('aria-checked', String(isDark));
+  if (lbl) lbl.textContent = isDark ? 'Modo oscuro' : 'Modo claro';
   if (ico) {
     ico.innerHTML = isDark
       ? `<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -41,14 +139,11 @@ function applyTheme(t) {
                  stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
          </svg>`;
   }
-
   localStorage.setItem('cvr_theme', t);
 }
 
 function toggleTheme() {
-  applyTheme(
-    document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
-  );
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 }
 
 /* ─── NAV ─── */
@@ -64,15 +159,11 @@ function nav(v) {
     el.classList.remove('active');
     el.removeAttribute('aria-current');
   });
-
   document.getElementById('view-' + v).classList.add('active');
   const ni = document.querySelector(`[data-view="${v}"]`);
   if (ni) { ni.classList.add('active'); ni.setAttribute('aria-current', 'page'); }
-
   document.getElementById('page-title').textContent = VIEW_TITLES[v] || v;
   if (v === 'history') renderHistory();
-
-  // Scroll to top
   document.getElementById('main-content')?.scrollTo(0, 0);
 }
 
@@ -84,58 +175,45 @@ const btnSubmit   = document.getElementById('btn-submit');
 const charCount   = document.getElementById('char-count');
 
 function checkReady() {
-  const len = ofertaInput.value.trim().length;
-  btnSubmit.disabled = !(fileInput.files.length && len > 20);
+  const len = ofertaInput?.value.trim().length || 0;
+  if (btnSubmit) btnSubmit.disabled = !(fileInput?.files.length && len > 20);
   if (charCount) {
     charCount.textContent = len + ' caracteres';
     charCount.style.color = len > 20 ? 'var(--jade-500)' : 'var(--text-3)';
   }
 }
 
-ofertaInput.addEventListener('input', checkReady);
-
-fileInput.addEventListener('change', () => {
+ofertaInput?.addEventListener('input', checkReady);
+fileInput?.addEventListener('change', () => {
   if (fileInput.files[0]) setDropReady(fileInput.files[0].name);
   checkReady();
 });
 
-// Drag & drop
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
-dropZone.addEventListener('dragleave', e => {
+dropZone?.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone?.addEventListener('dragleave', e => {
   if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('drag');
 });
-dropZone.addEventListener('drop', e => {
+dropZone?.addEventListener('drop', e => {
   e.preventDefault();
   dropZone.classList.remove('drag');
   const f = e.dataTransfer.files[0];
   if (f?.name.toLowerCase().endsWith('.zip')) {
-    const dt = new DataTransfer();
-    dt.items.add(f);
-    fileInput.files = dt.files;
-    setDropReady(f.name);
-    checkReady();
-  } else {
-    toast('Solo se aceptan archivos .zip');
-  }
+    const dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files;
+    setDropReady(f.name); checkReady();
+  } else { toast('Solo se aceptan archivos .zip'); }
 });
-
-// Teclado en drop zone
-dropZone.addEventListener('keydown', e => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    fileInput.click();
-  }
+dropZone?.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput?.click(); }
 });
 
 function setDropReady(name) {
   document.getElementById('drop-idle').hidden  = true;
   document.getElementById('drop-ready').hidden = false;
   document.getElementById('drop-fname').textContent = name;
-  dropZone.setAttribute('aria-label', `Archivo seleccionado: ${name}. Clic para cambiar.`);
 }
 
-/* Submit */
-btnSubmit.addEventListener('click', async () => {
+btnSubmit?.addEventListener('click', async () => {
+  if (!isLoggedIn()) { showLogin(); return; }
   const oferta = ofertaInput.value.trim();
   const file   = fileInput.files[0];
   if (!oferta || !file) return;
@@ -148,16 +226,15 @@ btnSubmit.addEventListener('click', async () => {
   fd.append('file', file);
 
   try {
-    const r = await fetch(`${API}/api/upload`, { method: 'POST', body: fd });
+    const r = await apiFetch('/api/upload', { method: 'POST', body: fd });
     const d = await r.json();
-    if (!r.ok) { toast(d.detail || 'Error en el servidor'); btnSubmit.disabled = false; setStatus('Error', 'error'); return; }
-
+    if (!r.ok) { toast(d.detail || 'Error'); btnSubmit.disabled = false; setStatus('Error', 'error'); return; }
     currentJob = { id: d.job_id, oferta: oferta.slice(0, 140), total: d.candidatos, ts: Date.now() };
     document.getElementById('prog-card').style.display = 'block';
     updateProg(0, d.candidatos);
     startPoll(d.candidatos);
-  } catch {
-    toast('No se pudo conectar con el servidor');
+  } catch (err) {
+    if (err.message !== 'Sesión expirada') toast('No se pudo conectar');
     btnSubmit.disabled = false;
     setStatus('Listo', 'idle');
   }
@@ -168,42 +245,29 @@ function startPoll(total) {
   clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
     try {
-      const r = await fetch(`${API}/api/status/${currentJob.id}`);
+      const r = await apiFetch(`/api/status/${currentJob.id}`);
       const d = await r.json();
       updateProg(d.done || 0, d.total || total);
       setStatus(`${d.done || 0} / ${d.total || total}`, 'running');
-
-      if (d.status === 'done') {
-        clearInterval(pollTimer);
-        await loadResults(currentJob.id, currentJob.oferta, currentJob.ts);
-      }
-      if (d.status === 'error') {
-        clearInterval(pollTimer);
-        toast('Error: ' + (d.error || 'desconocido'));
-        setStatus('Error', 'error');
-      }
-    } catch { /* silenciar errores de red */ }
+      if (d.status === 'done')  { clearInterval(pollTimer); await loadResults(currentJob.id, currentJob.oferta, currentJob.ts); }
+      if (d.status === 'error') { clearInterval(pollTimer); toast('Error: ' + (d.error || '?')); setStatus('Error', 'error'); }
+    } catch { }
   }, 1200);
 }
 
 function updateProg(done, total) {
-  const pct = total ? done / total * 100 : 0;
-  const fill = document.getElementById('prog-fill');
-  const val  = document.getElementById('prog-val');
+  const pct   = total ? done / total * 100 : 0;
+  const fill  = document.getElementById('prog-fill');
+  const val   = document.getElementById('prog-val');
   const track = fill?.parentElement;
-
   if (fill)  fill.style.width = pct + '%';
   if (val)   val.textContent  = `${done} / ${total}`;
-  if (track) {
-    track.setAttribute('aria-valuenow', Math.round(pct));
-    track.setAttribute('aria-valuemax', 100);
-  }
+  if (track) track.setAttribute('aria-valuenow', Math.round(pct));
 }
 
 async function loadResults(jobId, ofertaPreview, ts) {
-  const r = await fetch(`${API}/api/results/${jobId}`);
+  const r = await apiFetch(`/api/results/${jobId}`);
   const d = await r.json();
-
   const entry = {
     jobId,
     ofertaPreview: ofertaPreview || d.oferta.descripcion,
@@ -215,7 +279,6 @@ async function loadResults(jobId, ofertaPreview, ts) {
   historyDB.unshift(entry);
   localStorage.setItem('cvr_history', JSON.stringify(historyDB));
   updateHistBadge();
-
   document.getElementById('prog-card').style.display = 'none';
   renderResults(d);
   nav('results');
@@ -232,7 +295,6 @@ function updateHistBadge() {
   const b = document.getElementById('hist-badge');
   if (b) b.textContent = historyDB.length || '';
 }
-updateHistBadge();
 
 function renderHistory() {
   const el = document.getElementById('hist-content');
@@ -250,7 +312,8 @@ function renderHistory() {
       const avg = Math.round(sc.reduce((a, b) => a + b, 0) / sc.length);
       const d   = new Date(e.ts);
       const ds  = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`;
-      return `<div class="card hist-card anim-in" style="animation-delay:${i * 50}ms" onclick="openHistEntry('${e.jobId}')" role="button" tabindex="0" aria-label="Ver análisis del ${ds}">
+      return `<div class="card hist-card anim-in" style="animation-delay:${i * 50}ms"
+        onclick="openHistEntry('${e.jobId}')" role="button" tabindex="0">
         <div class="hist-head">
           <div class="hist-title">${esc(e.ofertaPreview.slice(0, 52))}…</div>
           <div class="hist-date">${ds}</div>
@@ -264,12 +327,8 @@ function renderHistory() {
       </div>`;
     }).join('')}
   </div>`;
-
-  // Teclado en hist cards
   el.querySelectorAll('.hist-card').forEach(card => {
-    card.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
-    });
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } });
   });
 }
 
@@ -289,7 +348,6 @@ function renderResults(data) {
   const max    = Math.max(...scores);
   const q60    = _ranking.filter(c => c.score >= 60).length;
 
-  // Agregación de habilidades
   const sm = {};
   _ranking.forEach(c => (c.habilidades || []).forEach(s => {
     const k = s.toLowerCase().trim();
@@ -297,7 +355,6 @@ function renderResults(data) {
   }));
   _topSkills = Object.entries(sm).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
-  // Distribución
   const buckets = Array.from({ length: 10 }, (_, i) => ({
     lbl: i * 10 + '',
     cnt: scores.filter(s => s >= i * 10 && s < (i + 1) * 10).length,
@@ -306,73 +363,39 @@ function renderResults(data) {
 
   const el = document.getElementById('results-content');
   el.innerHTML = `
-    <!-- Stats -->
     <div class="stat-row">
       ${[['Candidatos', _ranking.length], ['Score medio', avg], ['Score máximo', max], ['Calificados ≥60', q60]]
-        .map(([l, v], i) => `
-          <div class="card stat-box anim-in" style="animation-delay:${i * 60}ms">
-            <div class="stat-val">${v}</div>
-            <div class="stat-lbl">${l}</div>
-          </div>`).join('')}
+        .map(([l, v], i) => `<div class="card stat-box anim-in" style="animation-delay:${i * 60}ms">
+          <div class="stat-val">${v}</div><div class="stat-lbl">${l}</div></div>`).join('')}
     </div>
-
-    <!-- Grid -->
     <div class="results-grid">
-
-      <!-- Tabla -->
       <div class="card table-card">
         <div class="table-card-header">
           <span class="table-card-title">Ranking de candidatos</span>
           <span class="table-card-count">${_ranking.length} evaluados</span>
         </div>
-        <table class="rank-table" aria-label="Ranking de candidatos">
-          <thead>
-            <tr>
-              <th scope="col" style="width:44px">#</th>
-              <th scope="col">Candidato</th>
-              <th scope="col" style="width:140px">Score</th>
-              <th scope="col">Habilidades</th>
-            </tr>
-          </thead>
+        <table class="rank-table">
+          <thead><tr><th>#</th><th>Candidato</th><th>Score</th><th>Habilidades</th></tr></thead>
           <tbody>
             ${_ranking.map((c, i) => `
               <tr onclick="openDrawer(${i})" tabindex="0" role="button"
-                  aria-label="Ver detalle de ${esc(c.nombre || c.id)}, score ${c.score}"
                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDrawer(${i})}">
                 <td><div class="rnum ${rnumClass(i)}">${i + 1}</div></td>
-                <td>
-                  <div class="rname">${esc(c.nombre || c.id)}</div>
-                  <div class="rrole">${esc(c.puesto || '—')}</div>
-                </td>
-                <td>
-                  <div class="score-cell">
-                    <div class="score-track">
-                      <div class="score-fill" data-w="${c.score}"
-                           style="width:0%;background:${scColor(c.score)}"></div>
-                    </div>
-                    <div class="score-num" style="color:${scColor(c.score)}">${c.score}</div>
-                  </div>
-                </td>
-                <td>
-                  ${(c.habilidades || []).slice(0, 3)
-                    .map(h => `<span class="skill-pill ${i < 3 ? 'hi' : ''}">${esc(h)}</span>`)
-                    .join('')}
-                </td>
+                <td><div class="rname">${esc(c.nombre || c.id)}</div><div class="rrole">${esc(c.puesto || '—')}</div></td>
+                <td><div class="score-cell">
+                  <div class="score-track"><div class="score-fill" data-w="${c.score}" style="width:0%;background:${scColor(c.score)}"></div></div>
+                  <div class="score-num" style="color:${scColor(c.score)}">${c.score}</div>
+                </div></td>
+                <td>${(c.habilidades || []).slice(0, 3).map(h => `<span class="skill-pill ${i < 3 ? 'hi' : ''}">${esc(h)}</span>`).join('')}</td>
               </tr>`).join('')}
           </tbody>
         </table>
       </div>
-
-      <!-- Sidebar derecha -->
       <div class="rsidebar">
-
-        <!-- Radar -->
         <div class="card scard">
           <div class="scard-title">Radar de habilidades</div>
           <div class="radar-wrap" id="radar-wrap">${buildRadar(_topSkills)}</div>
         </div>
-
-        <!-- Barras -->
         <div class="card scard">
           <div class="scard-title">Frecuencia de habilidades</div>
           ${_topSkills.map(([sk, cnt]) => {
@@ -388,129 +411,78 @@ function renderResults(data) {
             </div>`;
           }).join('')}
         </div>
-
-        <!-- Distribución -->
         <div class="card scard">
           <div class="scard-title">Distribución de scores</div>
           <div class="dist-wrap">
             ${buckets.map(b => `
               <div class="dist-col">
                 <div class="dist-bar"
-                  style="height:${Math.max(3, (b.cnt / maxB) * 52)}px;background:${b.cnt ? 'var(--accent)' : 'var(--bg-muted)'};opacity:${b.cnt ? '.85' : '1'}"
+                  style="height:${Math.max(3, (b.cnt / maxB) * 52)}px;background:${b.cnt ? 'var(--accent)' : 'var(--bg-muted)'}"
                   onmouseenter="tip(event,'${b.lbl}–${+b.lbl + 9}: ${b.cnt} candidatos')"
-                  onmousemove="tipMove(event)" onmouseleave="tipOff()">
-                </div>
+                  onmousemove="tipMove(event)" onmouseleave="tipOff()"></div>
                 <div class="dist-lbl">${b.lbl}</div>
               </div>`).join('')}
           </div>
         </div>
-
-        <!-- Oferta -->
         <div class="card scard">
           <div class="scard-title">Oferta evaluada</div>
           <div class="oferta-text">${esc(data.oferta.descripcion)}</div>
         </div>
-
       </div>
     </div>`;
 
-  // Animar barras tras paint
   requestAnimationFrame(() => {
     setTimeout(() => {
-      document.querySelectorAll('.score-fill[data-w]')
-        .forEach(el => { el.style.width = el.dataset.w + '%'; });
-      document.querySelectorAll('.skbar-fill[data-w]')
-        .forEach(el => { el.style.width = el.dataset.w + '%'; });
+      document.querySelectorAll('.score-fill[data-w]').forEach(el => { el.style.width = el.dataset.w + '%'; });
+      document.querySelectorAll('.skbar-fill[data-w]').forEach(el => { el.style.width = el.dataset.w + '%'; });
     }, 80);
     initRadar();
   });
 }
 
-/* ─── RADAR SVG ─── */
+/* ─── RADAR ─── */
 function buildRadar(skills) {
-  if (!skills.length) {
-    return `<p style="text-align:center;padding:24px 0;color:var(--text-3);font-size:13px">Sin datos de habilidades</p>`;
-  }
-
-  const n      = skills.length;
-  const cx     = 130, cy = 130, R = 86;
-  const ang    = i => Math.PI * 2 * i / n - Math.PI / 2;
-  const pt     = (i, r) => [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))];
+  if (!skills.length) return `<p style="text-align:center;padding:24px 0;color:var(--text-3);font-size:13px">Sin datos</p>`;
+  const n = skills.length, cx = 130, cy = 130, R = 86;
+  const ang = i => Math.PI * 2 * i / n - Math.PI / 2;
+  const pt  = (i, r) => [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))];
   const maxVal = skills[0][1];
-
-  // Grid concéntrico
   let grid = '';
   for (let l = 1; l <= 4; l++) {
-    const r  = R * l / 4;
-    const ps = Array.from({ length: n }, (_, i) => pt(i, r).join(',')).join(' ');
-    const opacity = .3 + l * .05;
-    grid += `<polygon points="${ps}" fill="none" stroke="var(--border)" stroke-width="${l === 4 ? 1.5 : 1}" opacity="${opacity}"/>`;
+    const ps = Array.from({length:n},(_,i)=>pt(i,R*l/4).join(',')).join(' ');
+    grid += `<polygon points="${ps}" fill="none" stroke="var(--border)" stroke-width="1"/>`;
   }
-
-  // Ejes
-  const axes = Array.from({ length: n }, (_, i) => {
-    const [x, y] = pt(i, R);
-    return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--border)" stroke-width="1" opacity=".5"/>`;
+  const axes = Array.from({length:n},(_,i)=>{const[x,y]=pt(i,R);return`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;}).join('');
+  const dataPts  = skills.map(([,c],i)=>pt(i,R*(c/maxVal)));
+  const dataPoly = dataPts.map(p=>p.join(',')).join(' ');
+  const innerPts  = skills.map(([,c],i)=>pt(i,R*(c/maxVal)*0.4));
+  const innerPoly = innerPts.map(p=>p.join(',')).join(' ');
+  const labels = Array.from({length:n},(_,i)=>{
+    const[x,y]=pt(i,R+22);
+    const anchor=x<cx-4?'end':x>cx+4?'start':'middle';
+    return`<text x="${x}" y="${y}" text-anchor="${anchor}" dominant-baseline="middle" class="radar-label" data-idx="${i}" style="cursor:pointer">${esc(skills[i][0].slice(0,12))}</text>`;
   }).join('');
-
-  // Polígono de datos
-  const dataPts  = skills.map(([, c], i) => pt(i, R * (c / maxVal)));
-  const dataPoly = dataPts.map(p => p.join(',')).join(' ');
-
-  // Polígono interior traslúcido (40% escala → vértices más cerca del centro para habilidades menos frecuentes)
-  const innerPts  = skills.map(([, c], i) => pt(i, R * (c / maxVal) * 0.4));
-  const innerPoly = innerPts.map(p => p.join(',')).join(' ');
-
-  // Etiquetas
-  const labels = Array.from({ length: n }, (_, i) => {
-    const [x, y] = pt(i, R + 22);
-    const anchor = x < cx - 4 ? 'end' : x > cx + 4 ? 'start' : 'middle';
-    return `<text x="${x}" y="${y}"
-      text-anchor="${anchor}" dominant-baseline="middle"
-      class="radar-label" data-idx="${i}"
-      style="cursor:pointer">${esc(skills[i][0].slice(0, 12))}</text>`;
-  }).join('');
-
-  // Puntos de datos
-  const dots = dataPts.map(([x, y], i) => `
-    <circle cx="${x}" cy="${y}" r="4"
-      fill="var(--accent)" stroke="var(--bg-overlay)" stroke-width="2"
-      class="radar-dot" data-idx="${i}" style="cursor:pointer"/>`).join('');
-
-  return `<svg class="radar-svg" viewBox="0 0 260 260" width="250" height="250" id="radar-svg" role="img" aria-label="Gráfico radar de habilidades">
-    <title>Radar de las ${n} habilidades más frecuentes</title>
-    ${grid}
-    ${axes}
-    <polygon points="${innerPoly}"
-      fill="var(--accent)" fill-opacity=".06"
-      stroke="var(--accent)" stroke-opacity=".2"
-      stroke-width="1" stroke-dasharray="3 3"/>
-    <polygon points="${dataPoly}"
-      fill="var(--accent)" fill-opacity=".12"
-      stroke="var(--accent)" stroke-width="2"
-      id="radar-poly"/>
-    ${dots}
-    ${labels}
-  </svg>`;
+  const dots = dataPts.map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="4" fill="var(--accent)" stroke="var(--bg-overlay)" stroke-width="2" class="radar-dot" data-idx="${i}" style="cursor:pointer"/>`).join('');
+  return `<svg class="radar-svg" viewBox="0 0 260 260" width="250" height="250" id="radar-svg">
+    ${grid}${axes}
+    <polygon points="${innerPoly}" fill="var(--accent)" fill-opacity=".06" stroke="var(--accent)" stroke-opacity=".2" stroke-width="1" stroke-dasharray="3 3"/>
+    <polygon points="${dataPoly}" fill="var(--accent)" fill-opacity=".12" stroke="var(--accent)" stroke-width="2" id="radar-poly"/>
+    ${dots}${labels}</svg>`;
 }
 
 function initRadar() {
-  const svg  = document.getElementById('radar-svg');
+  const svg = document.getElementById('radar-svg');
   if (!svg) return;
-
-  // Animar el polígono dibujándose
   const poly = document.getElementById('radar-poly');
   if (poly) {
-    const len = poly.getTotalLength ? poly.getTotalLength() : 600;
-    poly.style.strokeDasharray  = len;
+    const len = poly.getTotalLength?.() ?? 600;
+    poly.style.strokeDasharray = len;
     poly.style.strokeDashoffset = len;
     poly.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.22,1,.36,1)';
     requestAnimationFrame(() => { poly.style.strokeDashoffset = '0'; });
   }
-
-  // Tooltips en puntos y etiquetas
   svg.querySelectorAll('.radar-dot, .radar-label').forEach(el => {
-    const i        = +el.getAttribute('data-idx');
+    const i = +el.getAttribute('data-idx');
     const [sk, cnt] = _topSkills[i] || [];
     if (!sk) return;
     el.addEventListener('mouseenter', e => tip(e, `${sk}: ${cnt} candidatos`));
@@ -521,68 +493,39 @@ function initRadar() {
 
 /* ─── DRAWER ─── */
 function openDrawer(idx) {
-  const c   = _ranking[idx];
-  const col = scColor(c.score);
-
+  const c = _ranking[idx], col = scColor(c.score);
   document.getElementById('drawer-content').innerHTML = `
-    <div class="d-rank">Candidato ${idx + 1} de ${_ranking.length}</div>
-    <div class="d-name" id="drawer-name">${esc(c.nombre || c.id)}</div>
-    <div class="d-role">${esc(c.puesto || '—')}</div>
-
-    <div class="d-score-wrap">
-      <div class="d-score" style="color:${col}">${c.score}</div>
-      <div class="d-score-max">/100</div>
-    </div>
-    <div class="d-score-bar">
-      <div class="d-score-bar-fill"
-           data-w="${c.score}"
-           style="width:0%;background:${col}"></div>
-    </div>
-
-    <div class="d-section">
-      <div class="d-section-lbl">Razón del score</div>
-      <div class="d-section-val">${esc(c.razon || '—')}</div>
-    </div>
+    <div class="d-rank">Candidato ${idx+1} de ${_ranking.length}</div>
+    <div class="d-name" id="drawer-name">${esc(c.nombre||c.id)}</div>
+    <div class="d-role">${esc(c.puesto||'—')}</div>
+    <div class="d-score-wrap"><div class="d-score" style="color:${col}">${c.score}</div><div class="d-score-max">/100</div></div>
+    <div class="d-score-bar"><div class="d-score-bar-fill" data-w="${c.score}" style="width:0%;background:${col}"></div></div>
+    <div class="d-section"><div class="d-section-lbl">Razón del score</div><div class="d-section-val">${esc(c.razon||'—')}</div></div>
     <div class="d-divider"></div>
-    <div class="d-section">
-      <div class="d-section-lbl">Experiencia</div>
-      <div class="d-section-val">${esc(c.experiencia || '—')}</div>
-    </div>
-    <div class="d-section">
-      <div class="d-section-lbl">Educación</div>
-      <div class="d-section-val">${esc(c.educacion || '—')}</div>
-    </div>
+    <div class="d-section"><div class="d-section-lbl">Experiencia</div><div class="d-section-val">${esc(c.experiencia||'—')}</div></div>
+    <div class="d-section"><div class="d-section-lbl">Educación</div><div class="d-section-val">${esc(c.educacion||'—')}</div></div>
     <div class="d-divider"></div>
-    <div class="d-section">
-      <div class="d-section-lbl">Habilidades</div>
-      <div class="d-pills">
-        ${(c.habilidades || []).map(h => `<span class="skill-pill hi">${esc(h)}</span>`).join('') || '—'}
-      </div>
+    <div class="d-section"><div class="d-section-lbl">Habilidades</div>
+      <div class="d-pills">${(c.habilidades||[]).map(h=>`<span class="skill-pill hi">${esc(h)}</span>`).join('')||'—'}</div>
     </div>
-    ${c.error ? `<div class="d-error">⚠ ${esc(c.error)}</div>` : ''}`;
-
-  const drawer  = document.getElementById('drawer');
+    ${c.error?`<div class="d-error">⚠ ${esc(c.error)}</div>`:''}`;
+  const drawer = document.getElementById('drawer');
   const overlay = document.getElementById('overlay');
   drawer.hidden = false;
   overlay.classList.add('open');
   requestAnimationFrame(() => {
     drawer.classList.add('open');
-    // Animar barra de score del drawer
     setTimeout(() => {
       const bar = drawer.querySelector('.d-score-bar-fill');
       if (bar) bar.style.width = bar.dataset.w + '%';
     }, 80);
   });
-
-  // Foco en el botón cerrar
   setTimeout(() => drawer.querySelector('.drawer-close')?.focus(), 320);
-
-  // Trampa de foco básica
   drawer.addEventListener('keydown', trapFocus);
 }
 
 function closeDrawer() {
-  const drawer  = document.getElementById('drawer');
+  const drawer = document.getElementById('drawer');
   const overlay = document.getElementById('overlay');
   drawer.classList.remove('open');
   overlay.classList.remove('open');
@@ -592,66 +535,48 @@ function closeDrawer() {
 
 function trapFocus(e) {
   if (e.key !== 'Tab') return;
-  const focusable = Array.from(
-    document.getElementById('drawer').querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )
-  ).filter(el => !el.disabled);
+  const focusable = Array.from(document.getElementById('drawer').querySelectorAll(
+    'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
+  )).filter(el => !el.disabled);
   if (!focusable.length) return;
-  const first = focusable[0], last = focusable[focusable.length - 1];
-  if (e.shiftKey) {
-    if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-  } else {
-    if (document.activeElement === last) { e.preventDefault(); first.focus(); }
-  }
+  const [first, last] = [focusable[0], focusable[focusable.length-1]];
+  if (e.shiftKey) { if (document.activeElement===first){e.preventDefault();last.focus();} }
+  else            { if (document.activeElement===last) {e.preventDefault();first.focus();} }
 }
 
-// Cerrar con Escape
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeDrawer();
-});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
 /* ─── TOOLTIP ─── */
 const gTip = document.getElementById('g-tip');
+function tip(e, txt)  { gTip.textContent=txt; gTip.classList.add('on'); tipMove(e); }
+function tipMove(e)   { gTip.style.left=(e.clientX+16)+'px'; gTip.style.top=(e.clientY-8)+'px'; }
+function tipOff()     { gTip.classList.remove('on'); }
+document.addEventListener('mousemove', e => { if (gTip.classList.contains('on')) tipMove(e); });
 
-function tip(e, txt) {
-  gTip.textContent = txt;
-  gTip.classList.add('on');
-  gTip.removeAttribute('aria-hidden');
-  tipMove(e);
+/* ─── STATUS / TOAST / UTILS ─── */
+function setStatus(text, state='idle') {
+  const b = document.getElementById('status-badge');
+  const d = document.getElementById('status-dot');
+  if (b) b.textContent = text;
+  if (d) d.setAttribute('data-state', state);
 }
-function tipMove(e) {
-  gTip.style.left = (e.clientX + 16) + 'px';
-  gTip.style.top  = (e.clientY - 8) + 'px';
-}
-function tipOff() {
-  gTip.classList.remove('on');
-  gTip.setAttribute('aria-hidden', 'true');
-}
-document.addEventListener('mousemove', e => {
-  if (gTip.classList.contains('on')) tipMove(e);
-});
-
-/* ─── STATUS ─── */
-function setStatus(text, state = 'idle') {
-  document.getElementById('status-badge').textContent = text;
-  const dot = document.getElementById('status-dot');
-  if (dot) dot.setAttribute('data-state', state);
-}
-
-/* ─── TOAST ─── */
-function toast(msg, duration = 3200) {
+function toast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('on');
-  setTimeout(() => t.classList.remove('on'), duration);
+  t.textContent = msg; t.classList.add('on');
+  setTimeout(() => t.classList.remove('on'), 3000);
+}
+function esc(s='') {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ─── UTILS ─── */
-function esc(s = '') {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+/* ─── TOGGLE PASSWORD ─── */
+function togglePass() {
+  const inp = document.getElementById('login-password');
+  const ico = document.getElementById('eye-icon');
+  if (!inp) return;
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  ico.innerHTML = show
+    ? `<path d="M2 2l12 12M6.5 6.7A3 3 0 0010.3 10M4.2 4.5C2.6 5.7 1 8 1 8s2.5 5 7 5a7 7 0 003.8-1.2M6 3.1A7 7 0 0115 8s-.8 1.6-2 2.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`
+    : `<path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.4"/>`;
 }
