@@ -50,7 +50,10 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     init_db()
-    print("[STARTUP] Base de datos de auth inicializada.")
+    # Limpiar viejos resultados
+    for f in RESULTS_DIR.glob("*.json"):
+        f.unlink()
+    print("[STARTUP] Base de datos auth + results cache limpiados.")
 
 jobs: dict[str, dict] = {}
 
@@ -135,6 +138,10 @@ async def upload_cvs(
     if not file.filename.lower().endswith(".zip"):
         raise HTTPException(400, "Solo se admiten archivos .zip")
 
+    # Limpiar viejos resultados antes de nuevo job
+    for f in RESULTS_DIR.glob("*.json"):
+        f.unlink(missing_ok=True)
+        
     job_id   = str(uuid.uuid4())[:8]
     work_dir = UPLOAD_DIR / job_id
     work_dir.mkdir(parents=True)

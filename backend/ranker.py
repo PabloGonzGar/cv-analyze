@@ -6,6 +6,7 @@ Versión optimizada: cliente compartido, semáforo, queue de escritura atómica.
 import asyncio
 import json
 import os
+import re
 
 import ollama
 
@@ -56,8 +57,8 @@ PROMPT_SISTEMA = (
     "experiencia (string), habilidades (array de strings), educacion (string)."
 )
 
+async def evaluar_cv_individual(oferta: str, id_cv: str, texto_cv: str, memoria_habilidades: dict, reintentos: int = 3):
 
-async def evaluar_cv_individual(oferta: str, id_cv: str, texto_cv: str, reintentos: int = 3):
     prompt_usuario = f"OFERTA:\n{oferta}\n\nCV:\n{texto_cv}"
 
     async with semaforo:
@@ -80,7 +81,39 @@ async def evaluar_cv_individual(oferta: str, id_cv: str, texto_cv: str, reintent
                 habilidades = data.get("habilidades", [])
                 if isinstance(habilidades, str):
                     habilidades = [h.strip() for h in habilidades.split(",")]
-                data["habilidades"] = habilidades
+
+                habilidades_normalizadas = []
+                vistas_en_este_cv = set() # Para evitar duplicados en el mismo documento
+
+                for h in habilidades:
+                    h = h.strip()  # Normalizar espacios
+                    
+                    huella = re.sub(r'[\W_]+', '', h.lower()).strip()
+                    if not huella:
+                        continue 
+
+                    # Mapeo a estándares primero
+                    mapeo_estandar = {
+                        "powerbi": "Power BI",
+                        "sqlserver": "SQL Server", 
+                        "js": "JavaScript",
+                        "javascript": "JavaScript"
+                    }
+                    
+                    if huella in mapeo_estandar:
+                        nombre_estandar = mapeo_estandar[huella]
+                    elif huella not in memoria_habilidades:
+                        nombre_estandar = h  # Original limpio
+                        memoria_habilidades[huella] = nombre_estandar
+                    else:
+                        nombre_estandar = memoria_habilidades[huella]
+
+                    if huella not in vistas_en_este_cv:
+                        habilidades_normalizadas.append(nombre_estandar)
+                        vistas_en_este_cv.add(huella)
+
+                        
+                data["habilidades"] = habilidades_normalizadas
 
                 await resultado_queue.put(data)
                 return data
@@ -99,13 +132,16 @@ async def procesar_todos(input_usuario: dict):
     oferta = input_usuario["oferta_trabajo"]
     cvs    = input_usuario["cvs"]
 
+    memoria_habilidades = {}  # Limpiar memoria por job para evitar duplicados de jobs previos
+
     if os.path.exists(FILE_PATH):
         os.remove(FILE_PATH)
 
     writer = asyncio.create_task(writer_task(len(cvs), oferta))
 
+
     await asyncio.gather(*[
-        evaluar_cv_individual(oferta, id_cv, texto_cv)
+        evaluar_cv_individual(oferta, id_cv, texto_cv, memoria_habilidades)
         for id_cv, texto_cv in cvs.items()
     ])
 

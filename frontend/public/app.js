@@ -268,6 +268,11 @@ function updateProg(done, total) {
 async function loadResults(jobId, ofertaPreview, ts) {
   const r = await apiFetch(`/api/results/${jobId}`);
   const d = await r.json();
+  
+  // Limpiar cache history para evitar skills viejos persistentes
+  localStorage.removeItem('cvr_history');
+  historyDB = [];
+  
   const entry = {
     jobId,
     ofertaPreview: ofertaPreview || d.oferta.descripcion,
@@ -275,7 +280,6 @@ async function loadResults(jobId, ofertaPreview, ts) {
     total: d.oferta.total_candidatos,
     data:  d,
   };
-  historyDB = historyDB.filter(e => e.jobId !== jobId);
   historyDB.unshift(entry);
   localStorage.setItem('cvr_history', JSON.stringify(historyDB));
   updateHistBadge();
